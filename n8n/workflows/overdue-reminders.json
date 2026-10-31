@@ -1,0 +1,175 @@
+{
+  "id": "LendLoopOverdue1",
+  "name": "LendLoop — daily overdue reminders",
+  "active": false,
+  "nodes": [
+    {
+      "id": "daily-trigger",
+      "name": "Every day at 09 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "sign-fetch",
+      "name": "Sign overdue query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "jsCode": "\nconst crypto = require('crypto');\nconst secret = $env.N8N_TO_CONVEX_SECRET;\nif (!secret || secret.length < 32) throw new Error('Integration not configured');\nfunction signed(path, value) {\n  const timestamp = Date.now();\n  const payload = Buffer.from(JSON.stringify(value), 'utf8').toString('base64');\n  const signature = crypto.createHmac('sha256', secret).update(timestamp + '.POST.' + path + '.' + payload).digest('base64');\n  return { json: { endpoint: path, envelope: { timestamp, payload, signature } } };\n}\n\nreturn [signed('/automation/overdue', {})];"
+      }
+    },
+    {
+      "id": "fetch-overdue",
+      "name": "Fetch overdue loans",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CONVEX_SITE_URL + $json.endpoint }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.envelope) }}",
+        "options": {
+          "timeout": 20000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "prepare-reminders",
+      "name": "Prepare signed reminder writebacks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "jsCode": "\nconst crypto = require('crypto');\nconst secret = $env.N8N_TO_CONVEX_SECRET;\nif (!secret || secret.length < 32) throw new Error('Integration not configured');\nfunction signed(path, value) {\n  const timestamp = Date.now();\n  const payload = Buffer.from(JSON.stringify(value), 'utf8').toString('base64');\n  const signature = crypto.createHmac('sha256', secret).update(timestamp + '.POST.' + path + '.' + payload).digest('base64');\n  return { json: { endpoint: path, envelope: { timestamp, payload, signature } } };\n}\n\nconst rows = $input.all().flatMap(i => Array.isArray(i.json) ? i.json : [i.json]);\nreturn rows.filter(row => typeof row.loanId === 'string' && typeof row.day === 'string').map(row => signed('/automation/reminder', { loanId: row.loanId, day: row.day }));"
+      }
+    },
+    {
+      "id": "record-reminder",
+      "name": "Deliver logged mock reminder and record status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CONVEX_SITE_URL + $json.endpoint }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.envelope) }}",
+        "options": {
+          "timeout": 20000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    }
+  ],
+  "connections": {
+    "Every day at 09 UTC": {
+      "main": [
+        [
+          {
+            "node": "Sign overdue query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign overdue query": {
+      "main": [
+        [
+          {
+            "node": "Fetch overdue loans",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch overdue loans": {
+      "main": [
+        [
+          {
+            "node": "Prepare signed reminder writebacks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare signed reminder writebacks": {
+      "main": [
+        [
+          {
+            "node": "Deliver logged mock reminder and record status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "executionTimeout": 120,
+    "errorWorkflow": "LendLoopErrors01"
+  },
+  "pinData": {},
+  "tags": []
+}

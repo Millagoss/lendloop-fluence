@@ -1,0 +1,53 @@
+{
+  "id": "LendLoopErrors01",
+  "name": "LendLoop — visible automation failures",
+  "active": false,
+  "nodes": [
+    {
+      "id": "error-trigger",
+      "name": "Workflow failed",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "error-log",
+      "name": "Log safe failure reference",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "jsCode": "return $input.all().map(item => { const reference = { workflowId: String(item.json.workflow?.id || 'unknown'), executionId: String(item.json.execution?.id || 'unknown'), message: 'LendLoop automation failed. Inspect the original execution in n8n.' }; console.error(JSON.stringify(reference)); return { json: reference }; });"
+      }
+    }
+  ],
+  "connections": {
+    "Workflow failed": {
+      "main": [
+        [
+          {
+            "node": "Log safe failure reference",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "executionTimeout": 120
+  },
+  "pinData": {},
+  "tags": []
+}

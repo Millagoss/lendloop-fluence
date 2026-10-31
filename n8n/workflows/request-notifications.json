@@ -1,0 +1,104 @@
+{
+  "id": "LendLoopRequest1",
+  "name": "LendLoop — request notifications",
+  "active": false,
+  "nodes": [
+    {
+      "id": "request-trigger",
+      "name": "Borrow request webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lendloop-request",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "webhookId": "lendloop-request"
+    },
+    {
+      "id": "verify-request",
+      "name": "Verify HMAC and prepare mock notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "jsCode": "\nconst crypto = require('crypto');\nconst secret = $env.CONVEX_TO_N8N_SECRET;\nif (!secret || secret.length < 32) throw new Error('Integration not configured');\nconst envelope = $input.first().json.body;\nif (!envelope || typeof envelope !== 'object') throw new Error('Unauthorized');\nconst { timestamp, payload, signature } = envelope;\nif (!Number.isSafeInteger(timestamp) || Math.abs(Date.now() - timestamp) > 300000 || typeof payload !== 'string' || payload.length > 200000 || typeof signature !== 'string') throw new Error('Unauthorized');\nconst expected = crypto.createHmac('sha256', secret).update(timestamp + '.POST./webhook/lendloop-request.' + payload).digest();\nconst supplied = Buffer.from(signature, 'base64');\nif (expected.length !== supplied.length || !crypto.timingSafeEqual(expected, supplied)) throw new Error('Unauthorized');\nconst event = JSON.parse(Buffer.from(payload, 'base64').toString('utf8'));\nif (!event || typeof event.eventId !== 'string') throw new Error('Invalid event');\n// A durable mock notification is recorded atomically by Convex. No contact data is needed.\n\nconst signingCrypto = require('crypto');\nconst outgoingSecret = $env.N8N_TO_CONVEX_SECRET;\nif (!outgoingSecret || outgoingSecret.length < 32) throw new Error('Integration not configured');\nfunction signed(path, value) {\n  const timestamp = Date.now();\n  const payload = Buffer.from(JSON.stringify(value), 'utf8').toString('base64');\n  const signature = signingCrypto.createHmac('sha256', outgoingSecret).update(timestamp + '.POST.' + path + '.' + payload).digest('base64');\n  return { json: { endpoint: path, envelope: { timestamp, payload, signature } } };\n}\n\nreturn [signed('/automation/event', { eventId: event.eventId })];\n"
+      }
+    },
+    {
+      "id": "record-event",
+      "name": "Record mock notification idempotently",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CONVEX_SITE_URL + $json.endpoint }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.envelope) }}",
+        "options": {
+          "timeout": 20000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    }
+  ],
+  "connections": {
+    "Borrow request webhook": {
+      "main": [
+        [
+          {
+            "node": "Verify HMAC and prepare mock notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify HMAC and prepare mock notification": {
+      "main": [
+        [
+          {
+            "node": "Record mock notification idempotently",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "executionTimeout": 120,
+    "errorWorkflow": "LendLoopErrors01"
+  },
+  "pinData": {},
+  "tags": []
+}
