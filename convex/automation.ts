@@ -77,12 +77,6 @@ export const deliver = internalAction({
         throw new Error("HTTPS required");
       const body = await sign(secret, "POST", target.pathname, {
         eventId,
-        loanId: event.loanId,
-        recipientId: event.recipientId,
-        kind: event.kind,
-        status: event.status,
-        toolName: event.toolName,
-        end: event.end,
       });
       const response = await fetch(url, {
         method: "POST",
@@ -156,13 +150,7 @@ export const overdue = internalQuery({
         q.eq("status", "approved").lt("end", day),
       )
       .collect();
-    const result: {
-      loanId: Id<"loans">;
-      recipientId: Id<"users">;
-      toolName: string;
-      end: string;
-      day: string;
-    }[] = [];
+    const result: { loanId: Id<"loans">; day: string }[] = [];
     for (const loan of loans) {
       const sent = await ctx.db
         .query("notifications")
@@ -171,9 +159,6 @@ export const overdue = internalQuery({
       if (!sent)
         result.push({
           loanId: loan._id,
-          recipientId: loan.borrowerId,
-          toolName: (await ctx.db.get(loan.toolId))?.name ?? "Removed tool",
-          end: loan.end,
           day,
         });
     }

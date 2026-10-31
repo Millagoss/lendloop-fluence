@@ -54,8 +54,6 @@ describe("signed integration protocol", () => {
   it("executes the actual n8n verifier and signs a Convex-compatible callback", async () => {
     const body = await sign(secret, "POST", "/webhook/lendloop-request", {
       eventId: "event123",
-      toolName: "Drill 🌱",
-      recipientId: "private",
     });
     const result = execute(verifyCode, body);
     expect(result).toHaveLength(1);

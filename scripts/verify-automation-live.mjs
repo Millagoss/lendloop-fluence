@@ -53,12 +53,6 @@ const event = events[0];
 const path = "/webhook/lendloop-request";
 const envelope = await sign(env.CONVEX_TO_N8N_SECRET, "POST", path, {
   eventId: event._id,
-  loanId: event.loanId,
-  recipientId: event.recipientId,
-  kind: event.kind,
-  status: event.status,
-  toolName: event.toolName,
-  end: event.end,
 });
 for (let retry = 0; retry < 2; retry++)
   assert(

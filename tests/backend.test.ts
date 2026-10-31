@@ -2,7 +2,7 @@ import { convexTest } from "convex-test";
 import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
 import schema from "../convex/schema";
 import { api, internal } from "../convex/_generated/api";
-import { sign } from "../lib/protocol";
+import { sign, verify } from "../lib/protocol";
 import { today } from "../lib/domain";
 
 const modules = import.meta.glob("../convex/**/*.ts");
@@ -40,6 +40,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date("2026-10-31T12:00:00Z"));
 });
 afterEach(() => {
+  vi.unstubAllGlobals();
   vi.useRealTimers();
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
@@ -220,6 +221,43 @@ describe("Convex authorization and borrowing", () => {
   });
 });
 describe("automation correctness and security", () => {
+  it("sends only the event reference to n8n and records successful delivery", async () => {
+    const { t, borrower, toolId } = await setup();
+    const secret = "x".repeat(64);
+    vi.stubEnv("CONVEX_TO_N8N_SECRET", secret);
+    vi.stubEnv(
+      "N8N_WEBHOOK_URL",
+      "http://localhost:5678/webhook/lendloop-request",
+    );
+    await borrower.mutation(api.loans.request, {
+      toolId,
+      start: today(),
+      end: today(),
+    });
+    const event = (await t.run((ctx) => ctx.db.query("events").first()))!;
+    let outgoing: unknown;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        outgoing = await verify(
+          secret,
+          "POST",
+          "/webhook/lendloop-request",
+          JSON.parse(String(init.body)),
+        );
+        await t.mutation(internal.automation.recordEvent, {
+          eventId: event._id,
+        });
+        return Response.json({ duplicate: false });
+      }),
+    );
+    await t.action(internal.automation.deliver, { eventId: event._id });
+    expect(outgoing).toEqual({ eventId: event._id });
+    expect(
+      (await t.query(internal.automation.getEvent, { eventId: event._id }))
+        ?.state,
+    ).toBe("delivered");
+  });
   it("requires valid HMAC on HTTP integration endpoints, binding signatures to a path", async () => {
     const { t } = await setup();
     vi.stubEnv("N8N_TO_CONVEX_SECRET", "x".repeat(64));
@@ -287,7 +325,7 @@ describe("automation correctness and security", () => {
     vi.setSystemTime(new Date("2026-11-01T09:00:00Z"));
     expect(
       await t.query(internal.automation.overdue, { day: today() }),
-    ).toHaveLength(1);
+    ).toEqual([{ loanId, day: today() }]);
     expect(await t.query(api.tools.publicList, { day: today() })).toEqual([]);
     expect(
       (await borrower.query(api.tools.list, { day: today() }))[0].unavailable,
