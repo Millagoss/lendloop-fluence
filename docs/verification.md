@@ -4,7 +4,7 @@ Verified on **31 October 2026** against local Next.js, the actual local Convex b
 
 | Check | Result |
 | --- | --- |
-| Targeted automated tests | 24 passed across domain, Convex handlers/HTTP and n8n code tests |
+| Targeted automated tests | 25 passed across domain, Convex handlers/HTTP and n8n code tests |
 | Root TypeScript check | Passed |
 | Convex’s own TypeScript check and function push | Passed; local backend serving on port 3210 |
 | ESLint | Passed |
@@ -21,6 +21,9 @@ Verified on **31 October 2026** against local Next.js, the actual local Convex b
 | Real overdue n8n workflow | Executed twice; exactly one daily reminder recorded |
 | Retried reminder callback | Returned `duplicate: true` |
 | Public landing page | Inspected in the in-app browser with Convex-backed listings |
+| Minimal automation payloads | Verified that request delivery sends only an event ID, and overdue queries return only loan IDs and reminder days |
+
+A follow-up requirement audit removed unused fields from the n8n boundary. The updated code passed all 25 tests, type checks, lint, Convex's own deployment checks, and live n8n signature/retry verification. The live database then contained seven delivered request/status events and one overdue reminder; repeated callbacks still added no duplicate records.
 
 The first three events were created before webhook activation and were delivered on the fourth attempt after n8n was activated. This exercised a real transient delivery failure and recovery. Exhausted retries and participant-only retry permissions were also tested in the automated suite.
 
