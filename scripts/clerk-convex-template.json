@@ -1,0 +1,10 @@
+{
+  "name": "convex",
+  "claims": {
+    "aud": "convex",
+    "name": "{{user.full_name}}",
+    "given_name": "{{user.first_name}}"
+  },
+  "lifetime": 60,
+  "allowed_clock_skew": 5
+}
