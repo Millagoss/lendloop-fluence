@@ -1,0 +1,36 @@
+{
+  "name": "lendloop",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "backend": "convex dev",
+    "workflows": "node scripts/generate-workflows.mjs",
+    "setup:secrets": "node scripts/setup-secrets.mjs"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "7.9.23",
+    "convex": "1.49.0",
+    "lucide-react": "1.66.0",
+    "next": "16.4.3",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@edge-runtime/vm": "5.0.0",
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "convex-test": "0.0.66",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.4.3",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5"
+  }
+}
