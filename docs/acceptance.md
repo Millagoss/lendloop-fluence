@@ -28,6 +28,8 @@ Source: [Fluence assignment on Remotive](https://remotive.com/remote-jobs/softwa
 
 ## Reviewer walkthrough
 
+The two-account listing, borrowing and admin steps were completed locally on 31 October 2026. Results, cleanup and remaining limits are recorded in [verification.md](verification.md#two-account-browser-walkthrough). To keep both accounts signed in at once during development, use `http://localhost:3000` for one and `http://127.0.0.1:3000` for the other; the latter is explicitly allowed as a Next.js development origin.
+
 1. Start services as described in README. Publish all three n8n workflows, including the error-trigger workflow, and select it in the main workflows’ error settings.
 2. Sign in as Neighbor A and list a drill. Sign out; anonymous browsing must show its name and category only.
 3. Sign in as Neighbor B. Browse/filter, open the listing, request today through today. Confirm the mock request notification is recorded and Neighbor A sees an incoming request.

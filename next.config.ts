@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const config: NextConfig = {
   poweredByHeader: false,
+  // Allow a second loopback hostname for isolated local sign-in sessions.
+  allowedDevOrigins: ["127.0.0.1"],
   async headers() {
     return [
       {

@@ -39,4 +39,25 @@ node scripts/verify-automation-live.mjs
 
 The fixture helper refuses to prepare another overdue loan when its tool already has an approved loan. Resolve that fixture before rerunning the full preparation. Local test-user IDs, fixture data and raw execution output remain in ignored `.local/`; no credentials belong in this record.
 
-**Limits:** Clerk authentication was exercised through real development session tokens and the Clerk sign-in modal was inspected in the browser; a complete human sign-up/sign-in browser walkthrough remains a manual acceptance step. Admin and failed-state retry cases have backend tests, not a complete multi-user browser walkthrough. No cloud app deployment or job application email has been sent. No claim of production readiness, healthcare compliance, or real email delivery is made. See the README’s production changes.
+## Two-account browser walkthrough
+
+Completed in the in-app browser with Million on `localhost:3000` and the fictional Olive account on `127.0.0.1:3000`. Separate loopback origins kept their Clerk sessions isolated. Olive signed in through Clerk's development email-code flow and signed out afterward; Million's existing session remained signed in.
+
+| Browser check | Result |
+| --- | --- |
+| Anonymous browsing | Available names/categories shown; owners and descriptions hidden |
+| Category filter and text search | Correctly narrowed the member library |
+| Create and edit a listing | Olive created an orbital sander, then changed its condition and description |
+| Ownership controls and scoped views | Million could request Olive's listing, but had no edit/remove controls; own listing/request views excluded other users' records |
+| Request → approve → return | Both accounts updated live; notification delivery appeared; availability returned |
+| Conflicting same-day request | Rejected by Convex; the error appeared inside the open request dialog |
+| Decline and borrower cancellation | Both terminal states appeared in both accounts with delivered notifications |
+| Owner removal | Olive removed the disposable sander; loan history remained visible |
+| Admin moderation | Temporarily promoted Olive removed Million's disposable garden fork; it disappeared from Million's listings |
+| Admin loan view | Rendered the loan list and neighbor directory; unrelated-user visibility is additionally covered by backend tests |
+| Trusted Lender | Admin badge assignment appeared on Olive's listings in Million's session; badge removal succeeded |
+| Cleanup | Both disposable listings removed; badge cleared; Olive restored to user and signed out; original pending/overdue fixtures retained |
+
+The walkthrough found and fixed two issues: Next.js blocked development assets on the second loopback hostname, and request errors were hidden behind the native dialog. The allowed development origin is now explicit, and dialog operations render an accessible inline error. After these changes, all 25 tests, TypeScript, ESLint and the optimized production build passed.
+
+**Limits:** New-account sign-up and exhausted-retry recovery were not exercised through the browser; failed-state retry authorization and behavior have backend tests, while transient recovery was exercised with real n8n above. No cloud app deployment or job application email has been sent. Notifications use the documented mock sink; no real email delivery, production readiness or healthcare compliance is claimed. See the README's production changes.

@@ -348,6 +348,7 @@ function Dashboard({
     error: boolean;
   } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(null), 7000);
@@ -358,19 +359,19 @@ function Dashboard({
     success: string,
     close = false,
   ) {
+    setModalError(null);
     setBusy(true);
     try {
       await work();
       setNotice({ message: success, error: false });
       if (close) setModal(null);
     } catch (error) {
-      setNotice({
-        message:
-          error instanceof ConvexError
-            ? String(error.data)
-            : "That didn’t connect. Please try again.",
-        error: true,
-      });
+      const message =
+        error instanceof ConvexError
+          ? String(error.data)
+          : "That didn’t connect. Please try again.";
+      if (close) setModalError(message);
+      else setNotice({ message, error: true });
     } finally {
       setBusy(false);
     }
@@ -836,6 +837,7 @@ function Dashboard({
       )}
       {modal && (
         <Modal
+          error={modalError}
           title={
             modal.type === "list"
               ? modal.tool
@@ -846,7 +848,10 @@ function Dashboard({
                 : "Remove this listing?"
           }
           close={() => {
-            if (!busy) setModal(null);
+            if (!busy) {
+              setModal(null);
+              setModalError(null);
+            }
           }}
         >
           {modal.type === "list" ? (
@@ -1055,10 +1060,12 @@ function Modal({
   title,
   children,
   close,
+  error,
 }: {
   title: string;
   children: ReactNode;
   close: () => void;
+  error?: string | null;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -1089,6 +1096,11 @@ function Modal({
         </button>
         <span className="eyebrow">A LITTLE SHARING GOES A LONG WAY</span>
         <h2 id="modal-title">{title}</h2>
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
         {children}
       </div>
     </dialog>
