@@ -137,4 +137,4 @@ flowchart LR
 
 ## Submission
 
-The deliverable is this source repository, exported workflows, setup/architecture/security documentation, and the production note above. A deployment is useful for review but is not required by the posting. [Application draft](docs/application-draft.md) contains placeholders for the candidate’s real portfolio and identity; it is not sent automatically.
+The deliverable is this source repository, exported workflows, setup/architecture/security documentation, and the production note above. A deployment is useful for review but is not required by the posting.
