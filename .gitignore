@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.env*
+!.env.example
+!.env.n8n.example
+.convex/
+coverage/
+*.tsbuildinfo
+*.log
+.DS_Store
+.clerk/
+.local/
